@@ -1,0 +1,12 @@
+  form {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .chatDiv {
+                visibility: hidden;
+            }
+
+.hidden {
+    visibility: hidden;
+}
