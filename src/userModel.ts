@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const userCollection = 'sessions'
+const userCollection = 'users'
 
 const userSchema = new mongoose.Schema({
     user:{ type: String, required: true, max: 50 },

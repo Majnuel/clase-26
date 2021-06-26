@@ -20,6 +20,7 @@ declare module 'express-session' {
     }
 }
 
+
 router.post('/login', (req, res) => {
         name = req.body.name
         console.log(name)
@@ -29,40 +30,40 @@ router.post('/login', (req, res) => {
         res.sendStatus(200)
 })
 
-//INGRESO:
-router.get("/ingreso", (req, res) => {
-    res.sendFile(path.join(__dirname+'/ingreso.html'))
-})
+// //INGRESO:
+// router.get("/ingreso", (req, res) => {
+//     res.sendFile(path.join(__dirname+'/ingreso.html'))
+// })
 
-router.post("/ingreso", (req, res) => {
-    const user = req.body.user;
-    const password = req.body.password;
-    console.log(user, password)
-    res.sendStatus(200)
-})
+// router.post("/ingreso", (req, res) => {
+//     const user = req.body.user;
+//     const password = req.body.password;
+//     console.log(user, password)
+//     res.sendStatus(200)
+// })
 
 // REGISTRO:
 router.get("/registro", (req, res) => {
     res.sendFile(path.join(__dirname+'/registro.html'))
 })
 
-router.post("/registro", (req, res) => {
-    const user = req.body.user;
-    const password = req.body.password;
-    const newUser = new userModel({ user: user, password: password })
-    newUser.save()
-     .then(() => {
-         req.session.login = true
-         req.session.name = user
-         console.log("req.session: ", req.sessionID)
-         console.log('usuario exitosamente agregado')
-        res.sendStatus(201)
-    })
-    .catch((err:any) => {
-        console.log(err)
-        res.sendStatus(500)
-    })   
-})
+// router.post("/registro", (req, res) => {
+//     const user = req.body.user;
+//     const password = req.body.password;
+//     const newUser = new userModel({ user: user, password: password })
+//     newUser.save()
+//      .then(() => {
+//          req.session.login = true
+//          req.session.name = user
+//          console.log("req.session: ", req.sessionID)
+//          console.log('usuario exitosamente agregado')
+//         res.sendStatus(201)
+//     })
+//     .catch((err:any) => {
+//         console.log(err)
+//         res.sendStatus(500)
+//     })   
+// })
 
 
 router.get('/login', (req, res) => {
@@ -82,11 +83,11 @@ router.get('/logout', (req, res) => {
     })
 })
 
-router.get('/vista', (req, res) => {
-    res.render("main", {
-        productos: productos, listExists: true
-    })
-})
+// router.get('/vista', (req, res) => {
+//     res.render("main", {
+//         productos: productos, listExists: true
+//     })
+// })
 
 router.get('/hastaluego', (req, res) => {
     res.sendFile(path.join(__dirname + '../../rutas/hastaLuego.html'))

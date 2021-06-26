@@ -15,12 +15,19 @@
 
 <body onload="checkForProducts(), checkForLogin()">
     <div class="container">
-        <div id="nav">
+        
+        <!-- OLD LOGIN INSIDE MAIN VIEW: -->
+        <!-- <div id="nav">
             <a id="logoutButtonWrapper" href="http://localhost:7777/api/hastaluego"></a>
             <form id="login" action="">
                 <input id="loginInput" type="text" placeholder="Ingrese su nombre" required>
                 <button type="submit">Log in</button>
             </form>
+        </div> -->
+        <div>
+            <button>
+                <a href="/logout">Logout</a>
+            </button>
         </div>
         <h1>Ingrese un producto</h1>
         <form id="form" action="/api/productos" enctype="application/x-www-form-urlencoded" method="post">
