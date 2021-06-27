@@ -2,8 +2,8 @@ const mongoose = require('mongoose')
 
 const userCollection = 'users'
 
-const userSchema = new mongoose.Schema({
-    user:{ type: String, required: true, max: 50 },
+const userSchema = mongoose.Schema({
+    username:{ type: String, required: true, max: 50 },
     password:{ type: String, required: true, max: 70 },
 })
 

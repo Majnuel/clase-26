@@ -2,6 +2,7 @@ import express, { Application } from "express"
 import dayjs from "dayjs"
 import fs from "fs"
 import { normalize, denormalize, schema } from 'normalizr'
+const bCrypt = require('bcrypt')
 const faker = require('faker')
 const app: Application = express()
 const http = require('http').createServer(app)
@@ -10,20 +11,20 @@ const path = require('path')
 const session = require('express-session')
 const cookieParser = require('cookie-parser')
 
+
+
 // MONGO
 const mongoStore = require('connect-mongo'); 
 const mongoose = require('mongoose');
+// USER MODEL:
+const userModel = require('../src/userModel')
+// CONNECT-MONGO OPTIONS
+const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true }
 
-// PASSPORT
+// PASSPORT\
 const passport = require('passport')
 import { Strategy as LocalStrategy } from 'passport-local'
 // const LocalStrategy = require('passport-local').LocalStrategy
-
-// USER MODEL:
-const userModel = require('../src/userModel')
-
-// CONNECT-MONGO OPTIONS
-const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true }
 
 // declaro session.user para que TS transpile bien
 declare module 'express-session' {
@@ -39,8 +40,8 @@ declare module 'express-session' {
 }
 
 // MIDDLEWARES:
-app.use(express.json())
 app.use(cookieParser())
+app.use(express.json())
 app.use(session({
     secret: 'secret',
     resave: false,
@@ -61,17 +62,22 @@ app.use(session({
     }),
     
 }))
+app.use(passport.initialize());
+app.use(passport.session());
 
 passport.use('login', new LocalStrategy({
     passReqToCallback : true
   },
-  function(req:any, username:any, password:any, done:any) { 
+  function(req, username, password, done) { 
+      debugger;
     // check in mongo if a user with username exists or not
     userModel.findOne({ 'username' :  username }, 
       function(err:any, user:any) {
         // In case of any error, return using the done method
-        if (err)
-          return done(err);
+        if (err) {
+            console.log(err)
+            return done(err);
+        }
         // Username does not exist, log error & redirect back
         if (!user){
           console.log('User Not Found with username '+username);
@@ -79,11 +85,13 @@ passport.use('login', new LocalStrategy({
           return done(null, false)
         }
         // User exists but wrong password, log the error 
-        // if (!isValidPassword(user, password)){
-        //   console.log('Invalid Password');
-        //   console.log('message', 'Invalid Password');
-        //   return done(null, false) 
-        // }
+        if (!isValidPassword(user, password)){
+          console.log('Invalid Password');
+          console.log('message', 'Invalid Password');
+          console.log("username: ", username)
+          console.log("password: ", password)
+          return done(null, false) 
+        }
         // User and password both match, return user from 
         // done method which will be treated like success
         return done(null, user);
@@ -92,15 +100,22 @@ passport.use('login', new LocalStrategy({
   })
 );
 
+var isValidPassword = function(user:any, password:any){
+  console.log('isValidPassword. user: ', user, typeof user.password)
+  console.log('isValidPassword. password: ', password, typeof password)
+  console.log("bcrypt: ",  bCrypt.compareSync(password, user.password))
+  //BCRYPT ESTA EVALUANDO SIEMPRE COMO FALSO AUNQUE LOS PASSWORDS COINCIDAN
+  // return bCrypt.compareSync(password, user.password);
+  return (user.password === password)
+}
+
 passport.use('register', new LocalStrategy({
     passReqToCallback : true
   },
-  function(req, user, password, done) {
-      debugger
-      console.log('passport.use: register')
+  function(req, username, password, done) {
     const findOrCreateUser = function(){
       // find a user in Mongo with provided username
-      userModel.findOne({'user':user},function(err:any, user:any) {
+      userModel.findOne({'username':username},function(err:any, user:any) {
         // In case of any error return
         if (err){
           console.log('Error in SignUp: '+err);
@@ -116,8 +131,8 @@ passport.use('register', new LocalStrategy({
           // create the user
           let newUser = new userModel();
           // set the user's local credentials
-          newUser.user = user;
-          newUser.password = password;
+          newUser.username = username;
+          newUser.password = createHash(password);
 
           // save the user
           newUser.save(function(err:any) {
@@ -136,7 +151,27 @@ passport.use('register', new LocalStrategy({
     process.nextTick(findOrCreateUser);
   })
 )
-
+  // Generates hash using bCrypt
+var createHash = function(password:any){
+  return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
+}
+   
+// Configure Passport authenticated session persistence.
+//
+// In order to restore authentication state across HTTP requests, Passport needs
+// to serialize users into and deserialize users out of the session.  The
+// typical implementation of this is as simple as supplying the user ID when
+// serializing, and querying the user record by ID from the database when
+// deserializing.
+passport.serializeUser(function(user:any, done:any) {
+  done(null, user._id);
+});
+ 
+passport.deserializeUser(function(id:any, done:any) {
+  userModel.findById(id, function(err:any, user:any) {
+    done(err, user);
+  });
+});
 
 
 const author = new schema.Entity("author")
@@ -155,7 +190,7 @@ let objWithNormedMsg: any = ''
 
 // SOCKET.IO
 io.on('connection', (socket: any) => {
-    console.log('se conectó un usuario')
+    console.log('SOCKET.OI: se conectó un usuario')
     socket.on('newProduct', (producto: object) => {
         console.log("nuevo producto via socket.io: ", producto)
         io.emit('newProduct', producto)
@@ -197,17 +232,18 @@ io.on('connection', (socket: any) => {
     })
 })
 
-app.use(express.urlencoded({ extended: true }))
 app.use(express.static('public')) 
-app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 app.use('/api', require('./rutas/routing'))
 app.use('/productos', require('./rutas/routing'))
 
 
 // RUTAS:
 app.get('/', (req, res) => {
-    if (req.session.user) {
-        console.log('req.session.user = ', req.session.user)
+    console.log("location: /")
+    if (req.isAuthenticated()) {
+        console.log('req.session', req.session)
+        console.log('req.user', req.user)
         res.redirect('/dashboard') 
     } else {
         res.redirect('/ingreso')
@@ -220,19 +256,12 @@ app.get('/dashboard', (req, res) => {
 
 //INGRESO:
 app.get("/ingreso", (req, res) => {
-    console.log('req.session.user: ', req.session.user)
     console.log('req.session: ', req.session)
     res.sendFile(path.join(__dirname,'..', 'public/ingreso.html'))
 })
 
-app.post("/ingreso", (req, res) => {
-    const user = req.body.user;
-    const password = req.body.password;
-    req.session.user = user
-    req.session.password = password
-    console.log('user: ', req.session.user)
-    console.log('password: ', req.session.password)
-    res.sendStatus(200)
+app.post('/ingreso', passport.authenticate('login', { failureRedirect: '/failedlogin' }), (req,res) => {
+    res.redirect('/') 
 })
 
 // REGISTRO:
@@ -240,23 +269,26 @@ app.get("/registro", (req, res) => {
     res.sendFile(path.join(__dirname,'..', 'public/registro.html'))
 })
 
-app.post('/registro', passport.authenticate('register', { failureRedirect: '/failregister' }), (req,res) => {
+app.post('/registro', passport.authenticate('register', { failureRedirect: '/failedregister' }), (req,res) => {
     res.redirect('/') 
 })
 
 //LOGOUT:
 app.get('/logout', (req, res) => {
-    req.session.destroy( () => {
-        res.redirect('/')
-    })
+    req.logOut()
+    res.redirect("/")
 })
 
 // ERRORES
-app.get('/failregister', (req, res) => {
+app.get('/failedregister', (req, res) => {
     res.send("FALLÓ EL REGISTRO")
 })
 
-http.listen(7777, () => {
+app.get('/failedlogin', (req, res) => {
+    res.send("FALLÓ EL LOGIN")
+})
+
+http.listen(7778, () => {
     const db = mongoose.connection;
     db.on('error', console.error.bind(console, 'connection error:'));
     db.once('open', function() {
@@ -264,5 +296,5 @@ http.listen(7777, () => {
     })
     //conexion a mongoose
     mongoose.connect('mongodb+srv://emma:borinda@cluster0.ydcxa.mongodb.net/users?retryWrites=true&w=majority', {useNewUrlParser: true, useUnifiedTopology: true});
-    console.log('server is live on port 7777')
+    console.log('server is live on port 7778')
 })

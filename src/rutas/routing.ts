@@ -66,14 +66,14 @@ router.get("/registro", (req, res) => {
 // })
 
 
-router.get('/login', (req, res) => {
-    const payload = {
-        id: req.sessionID,
-        gotTime: gotTime,
-        name: req.session.name
-    }
-    res.send(payload)
-})
+// router.get('/login', (req, res) => {
+//     const payload = {
+//         id: req.sessionID,
+//         gotTime: gotTime,
+//         name: req.session.name
+//     }
+//     res.send(payload)
+// })
 
 router.get('/logout', (req, res) => {
     req.session.destroy(err => {
